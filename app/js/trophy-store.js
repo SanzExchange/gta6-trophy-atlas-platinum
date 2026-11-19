@@ -1,14 +1,15 @@
-// Trophy store for the rebuild: fetch the official list, persist the earned
-// set in localStorage, and move progress in and out as a JSON file or a link.
-export const STORAGE_KEY = 'atlas-platinum-leonida-rebuild-v2';
+// Trophy store — Atlas Platinum Leonida (retry build).
+// One small job: move trophy data and earned-progress between the JSON file,
+// the browser's localStorage, an exported file, an imported file and a link.
+export const STORAGE_KEY = 'atlas-platinum-leonida-progress-v3';
 
 export async function loadTrophyList() {
-  const res = await fetch('data/trophies.json');
-  const data = await res.json();
-  return Array.isArray(data) ? data : data.trophies;
+  const response = await fetch('data/trophies.json');
+  const parsed = await response.json();
+  return Array.isArray(parsed) ? parsed : parsed.trophies;
 }
 
-export function loadEarned() {
+export function loadEarnedSet() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return new Set();
@@ -19,36 +20,40 @@ export function loadEarned() {
   }
 }
 
-export function saveEarned(earned) {
+export function saveEarnedSet(earned) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...earned].sort((a, b) => a - b)));
   } catch {
-    /* storage unavailable: progress simply will not persist */
+    /* storage blocked or full: the atlas still works, progress just will not persist */
   }
 }
 
-export function exportProgress(earned) {
-  const payload = JSON.stringify({ atlas: 'Atlas Platinum Leonida', earned: [...earned].sort((a, b) => a - b) }, null, 2);
+export function downloadProgressFile(earned) {
+  const payload = JSON.stringify(
+    { atlas: 'Atlas Platinum Leonida — Peta Perjalanan 55 Trophy', earned: [...earned].sort((a, b) => a - b) },
+    null,
+    2,
+  );
   const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'atlas-platinum-progress.json';
-  a.click();
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'atlas-platinum-leonida-progress.json';
+  anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
-export function importProgress(file) {
+export function readProgressFile(file) {
   return file.text().then((text) => {
-    const data = JSON.parse(text);
-    const ids = Array.isArray(data) ? data : data.earned;
-    if (!Array.isArray(ids)) throw new Error('No earned list in that file.');
+    const parsed = JSON.parse(text);
+    const ids = Array.isArray(parsed) ? parsed : parsed.earned;
+    if (!Array.isArray(ids)) throw new Error('that file holds no earned list');
     return new Set(ids.filter((n) => Number.isInteger(n)));
   });
 }
 
-export function progressLink(earned) {
-  const u = new URL(window.location.href);
-  u.search = '';
-  u.searchParams.set('earned', [...earned].sort((a, b) => a - b).join(','));
-  return u.toString();
+export function buildProgressLink(earned) {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.searchParams.set('earned', [...earned].sort((a, b) => a - b).join(','));
+  return url.toString();
 }

@@ -1,21 +1,23 @@
-// Atlas Platinum Leonida — rebuild bootstrap. Loads the trophy list, restores
-// saved progress, applies any ?view= deep-link, renders the three panels and
-// wires every control. The ?view= presets exist so a fresh profile can open
-// the atlas mid-journey (and so the maker's screenshots show real states).
-import { loadTrophyList, loadEarned, saveEarned, exportProgress, importProgress, progressLink } from './js/trophy-store.js';
+// Atlas Platinum Leonida — retry build bootstrap.
+// Loads the official trophy list, restores the progress saved in this
+// browser, applies any ?view= deep link, renders the three atlas panels
+// (roadmap chart, checklist, open guide) and wires every control. The ?view=
+// presets open the atlas mid-journey in a fresh profile — they are also how
+// the maker's screenshots show real, earned states instead of an empty book.
+import { loadTrophyList, loadEarnedSet, saveEarnedSet, downloadProgressFile, readProgressFile, buildProgressLink } from './js/trophy-store.js';
 import { renderChecklist } from './js/render-checklist.js';
 import { renderRoadmap } from './js/render-roadmap.js';
 import { renderGuide } from './js/render-guide.js';
 
 export const DEMO_EARNED_IDS = [2, 3, 4, 8, 16, 20, 21, 29, 35, 42, 52, 53];
 export const VIEW_PRESETS = {
-  cover: { open: 1 },
-  guide: { open: 28, kind: 'collectibles' },
-  missable: { open: 28, kind: 'missable', spoiler: true },
-  roadmap: { open: 14, stage: 'VI' },
+  cover: { openGuideFor: 1 },
+  guide: { openGuideFor: 28, kind: 'collectibles' },
+  missable: { openGuideFor: 28, kind: 'missable', spoiler: true },
+  roadmap: { openGuideFor: 14, stage: 'VI' },
 };
 
-export const state = {
+export const atlasState = {
   trophies: [],
   earned: new Set(),
   kind: 'all',
@@ -27,100 +29,100 @@ export const state = {
   selectedId: 1,
 };
 
-const RING_CIRCUMFERENCE = 326.7;
+const COMPASS_RING_CIRCUMFERENCE = 326.7;
 
-export function renderProgress() {
-  const total = state.trophies.length || 55;
-  const n = state.earned.size;
-  const pct = total ? Math.round((n / total) * 100) : 0;
-  document.getElementById('ringFill').style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - n / total));
-  document.getElementById('ringPct').textContent = pct + '%';
-  document.getElementById('progressText').textContent = `${n} of ${total} earned`;
-  const count = (g) => state.trophies.filter((t) => t.grade === g && state.earned.has(t.id)).length;
+export function renderProgressRing() {
+  const total = atlasState.trophies.length || 55;
+  const earnedCount = atlasState.earned.size;
+  const percent = total ? Math.round((earnedCount / total) * 100) : 0;
+  document.getElementById('ringFill').style.strokeDashoffset = String(COMPASS_RING_CIRCUMFERENCE * (1 - earnedCount / total));
+  document.getElementById('ringPct').textContent = percent + '%';
+  document.getElementById('progressText').textContent = `${earnedCount} of ${total} earned`;
+  const earnedOfGrade = (grade) => atlasState.trophies.filter((t) => t.grade === grade && atlasState.earned.has(t.id)).length;
   document.getElementById('gradeCounts').textContent =
-    `Platinum ${count('platinum')}/1 · Gold ${count('gold')}/2 · Silver ${count('silver')}/6 · Bronze ${count('bronze')}/46`;
+    `Platinum ${earnedOfGrade('platinum')}/1 · Gold ${earnedOfGrade('gold')}/2 · Silver ${earnedOfGrade('silver')}/6 · Bronze ${earnedOfGrade('bronze')}/46`;
 }
 
-export function renderAll() {
-  renderProgress();
-  renderRoadmap(state, (stageKey) => { state.stage = stageKey; renderAll(); });
-  renderChecklist(state, {
+export function renderAtlas() {
+  renderProgressRing();
+  renderRoadmap(atlasState, (stageKey) => { atlasState.stage = stageKey; renderAtlas(); });
+  renderChecklist(atlasState, {
     onToggle: (id) => {
-      if (state.earned.has(id)) state.earned.delete(id); else state.earned.add(id);
-      saveEarned(state.earned);
-      renderAll();
+      if (atlasState.earned.has(id)) atlasState.earned.delete(id); else atlasState.earned.add(id);
+      saveEarnedSet(atlasState.earned);
+      renderAtlas();
     },
-    onSelect: (id) => { state.selectedId = id; renderAll(); },
+    onSelect: (id) => { atlasState.selectedId = id; renderAtlas(); },
   });
-  renderGuide(state);
+  renderGuide(atlasState);
   document.querySelectorAll('#filterChips .chip').forEach((chip) => {
-    chip.classList.toggle('active', chip.dataset.kind === state.kind);
+    chip.classList.toggle('active', chip.dataset.kind === atlasState.kind);
   });
-  document.getElementById('spoilerToggle').checked = state.spoiler;
+  document.getElementById('spoilerToggle').checked = atlasState.spoiler;
 }
 
 function applyDeepLink() {
   const params = new URLSearchParams(window.location.search);
   const preset = VIEW_PRESETS[params.get('view')] || {};
-  if (preset.kind) state.kind = preset.kind;
-  if (preset.spoiler) state.spoiler = true;
-  if (preset.stage) state.stage = preset.stage;
-  if (preset.open) state.selectedId = preset.open;
+  if (preset.kind) atlasState.kind = preset.kind;
+  if (preset.spoiler) atlasState.spoiler = true;
+  if (preset.stage) atlasState.stage = preset.stage;
+  if (preset.openGuideFor) atlasState.selectedId = preset.openGuideFor;
   if (params.get('view')) {
-    for (const id of DEMO_EARNED_IDS) state.earned.add(id);
-    saveEarned(state.earned);
+    for (const id of DEMO_EARNED_IDS) atlasState.earned.add(id);
+    saveEarnedSet(atlasState.earned);
   }
-  if (params.get('filter')) state.kind = params.get('filter');
-  if (params.get('spoiler') === 'on') state.spoiler = true;
-  if (params.get('grade')) state.grade = params.get('grade');
-  if (params.get('open')) state.selectedId = Number(params.get('open'));
+  if (params.get('filter')) atlasState.kind = params.get('filter');
+  if (params.get('spoiler') === 'on') atlasState.spoiler = true;
+  if (params.get('grade')) atlasState.grade = params.get('grade');
+  if (params.get('open')) atlasState.selectedId = Number(params.get('open'));
   if (params.get('earned')) {
-    for (const raw of params.get('earned').split(',')) {
-      const id = Number(raw);
-      if (Number.isInteger(id)) state.earned.add(id);
+    for (const rawId of params.get('earned').split(',')) {
+      const id = Number(rawId);
+      if (Number.isInteger(id)) atlasState.earned.add(id);
     }
-    saveEarned(state.earned);
+    saveEarnedSet(atlasState.earned);
   }
 }
 
-function wireControls() {
-  document.getElementById('filterChips').addEventListener('click', (ev) => {
-    const chip = ev.target.closest('[data-kind]');
+function wireAtlasControls() {
+  document.getElementById('filterChips').addEventListener('click', (event) => {
+    const chip = event.target.closest('[data-kind]');
     if (!chip) return;
-    state.kind = chip.dataset.kind;
-    renderAll();
+    atlasState.kind = chip.dataset.kind;
+    renderAtlas();
   });
-  document.getElementById('searchInput').addEventListener('input', (ev) => { state.search = ev.target.value; renderAll(); });
-  document.getElementById('spoilerToggle').addEventListener('change', (ev) => { state.spoiler = ev.target.checked; renderAll(); });
-  document.getElementById('hideEarnedToggle').addEventListener('change', (ev) => { state.hideEarned = ev.target.checked; renderAll(); });
-  document.getElementById('gradeSelect').addEventListener('change', (ev) => { state.grade = ev.target.value; renderAll(); });
-  document.getElementById('exportBtn').addEventListener('click', () => exportProgress(state.earned));
+  document.getElementById('searchInput').addEventListener('input', (event) => { atlasState.search = event.target.value; renderAtlas(); });
+  document.getElementById('spoilerToggle').addEventListener('change', (event) => { atlasState.spoiler = event.target.checked; renderAtlas(); });
+  document.getElementById('hideEarnedToggle').addEventListener('change', (event) => { atlasState.hideEarned = event.target.checked; renderAtlas(); });
+  document.getElementById('gradeSelect').addEventListener('change', (event) => { atlasState.grade = event.target.value; renderAtlas(); });
+  document.getElementById('exportBtn').addEventListener('click', () => downloadProgressFile(atlasState.earned));
   document.getElementById('copyLinkBtn').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(progressLink(state.earned)); } catch { /* clipboard unavailable */ }
+    try { await navigator.clipboard.writeText(buildProgressLink(atlasState.earned)); } catch { /* clipboard unavailable in this browser */ }
   });
   document.getElementById('resetBtn').addEventListener('click', () => {
-    state.earned = new Set();
-    saveEarned(state.earned);
-    renderAll();
+    atlasState.earned = new Set();
+    saveEarnedSet(atlasState.earned);
+    renderAtlas();
   });
-  document.getElementById('importInput').addEventListener('change', async (ev) => {
-    const file = ev.target.files && ev.target.files[0];
+  document.getElementById('importInput').addEventListener('change', async (event) => {
+    const file = event.target.files && event.target.files[0];
     if (!file) return;
     try {
-      state.earned = await importProgress(file);
-      saveEarned(state.earned);
-      renderAll();
-    } catch { /* unreadable file: keep current progress */ }
-    ev.target.value = '';
+      atlasState.earned = await readProgressFile(file);
+      saveEarnedSet(atlasState.earned);
+      renderAtlas();
+    } catch { /* unreadable file: keep the current progress untouched */ }
+    event.target.value = '';
   });
 }
 
-async function boot() {
-  state.trophies = await loadTrophyList();
-  state.earned = loadEarned();
+async function bootAtlas() {
+  atlasState.trophies = await loadTrophyList();
+  atlasState.earned = loadEarnedSet();
   applyDeepLink();
-  wireControls();
-  renderAll();
+  wireAtlasControls();
+  renderAtlas();
 }
 
-boot();
+bootAtlas();

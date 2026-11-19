@@ -1,62 +1,76 @@
-// Guide panel for the rebuild: the selected trophy's official name and
-// description, the missable warning where it applies, the atlas's own guide
-// text, its steps, and the named source the guide cites.
-import { spoilerMask } from './filters.js';
+// Guide panel — Atlas Platinum Leonida (retry build).
+// Shows the selected trophy the way the atlas promises: official name and
+// official description first, the missable warning where one applies, then
+// the atlas's own-words guide, its numbered steps, and the named source the
+// guide is cited from. Under spoiler-safe, an unearned story trophy reveals
+// none of it.
+import { maskForSpoiler } from './filters.js';
 
 export function renderGuide(state) {
   const host = document.getElementById('guideBody');
   const trophy = state.trophies.find((t) => t.id === state.selectedId);
   if (!trophy) {
-    host.innerHTML = '<p class="guide-empty">Select a trophy in the checklist to read its guide here.</p>';
+    host.innerHTML = '<p class="guide-empty">Pick any marker in the checklist and its full guide opens here — official text, our own words, steps, and the source each fact is cited from.</p>';
     return;
   }
-  const view = spoilerMask(trophy, state);
+  const view = maskForSpoiler(trophy, state);
   host.innerHTML = '';
+
   if (trophy.missable) {
     const banner = document.createElement('div');
     banner.className = 'missable-banner';
-    banner.textContent = '⚑ MISSABLE — the first meditation spot, at Jason\u2019s house, exists only during Chapter 1. Do it before that chapter ends, or keep a manual save from Chapter 1.';
+    banner.textContent = '⚑ MISSABLE — one meditation spot, at Jason\u2019s house, exists only during Chapter 1. Use it before that chapter ends, and keep a manual save from Chapter 1 as insurance.';
     host.appendChild(banner);
   }
-  const title = document.createElement('h3');
-  title.textContent = view.name;
-  const official = document.createElement('p');
-  official.className = 'guide-official';
-  official.textContent = view.masked ? view.description : `\u201C${trophy.description}\u201D — official description`;
-  const meta = document.createElement('div');
-  meta.className = 'guide-meta';
-  for (const label of [trophy.grade.toUpperCase(), trophy.kind, 'Roadmap stage ' + trophy.stage, trophy.hidden ? 'hidden on PS5' : 'visible on PS5', state.earned.has(trophy.id) ? '✓ earned' : 'not yet earned']) {
-    const s = document.createElement('span');
-    s.className = 'tag';
-    s.textContent = label;
-    meta.appendChild(s);
+
+  const heading = document.createElement('h3');
+  heading.textContent = view.name;
+  const officialLine = document.createElement('p');
+  officialLine.className = 'guide-official';
+  officialLine.textContent = view.masked ? view.description : `\u201C${trophy.description}\u201D — official PlayStation description`;
+  const metaLine = document.createElement('div');
+  metaLine.className = 'guide-meta';
+  const metaLabels = [
+    trophy.grade.toUpperCase(),
+    trophy.kind,
+    'Roadmap stage ' + trophy.stage,
+    trophy.hidden ? 'hidden on PS5' : 'visible on PS5',
+    state.earned.has(trophy.id) ? '✓ earned' : 'not yet earned',
+  ];
+  for (const label of metaLabels) {
+    const chip = document.createElement('span');
+    chip.className = 'tag';
+    chip.textContent = label;
+    metaLine.appendChild(chip);
   }
-  const guide = document.createElement('p');
-  guide.className = 'guide-text';
-  guide.textContent = view.masked
-    ? 'Spoiler-safe is on: this story trophy\u2019s guide is hidden until the trophy is earned. Tick it in the checklist to reveal the full guide.'
+  const guideText = document.createElement('p');
+  guideText.className = 'guide-text';
+  guideText.textContent = view.masked
+    ? 'Spoiler-safe is on, so this story trophy\u2019s guide stays covered until the trophy is earned. Tick it in the checklist and the full guide — words, steps and source — is revealed.'
     : trophy.guide;
-  host.append(title, official, meta, guide);
-  if (!view.masked && Array.isArray(trophy.steps) && trophy.steps.length) {
-    const ol = document.createElement('ol');
-    ol.className = 'guide-steps';
-    for (const step of trophy.steps) {
-      const li = document.createElement('li');
-      li.textContent = step;
-      ol.appendChild(li);
+  host.append(heading, officialLine, metaLine, guideText);
+
+  if (!view.masked && Array.isArray(trophy.steps) && trophy.steps.length > 0) {
+    const steps = document.createElement('ol');
+    steps.className = 'guide-steps';
+    for (const stepText of trophy.steps) {
+      const item = document.createElement('li');
+      item.textContent = stepText;
+      steps.appendChild(item);
     }
-    host.appendChild(ol);
+    host.appendChild(steps);
   }
+
   if (!view.masked && trophy.source) {
-    const src = document.createElement('p');
-    src.className = 'guide-source';
-    src.append('Source cited for this guide: ');
-    const a = document.createElement('a');
-    a.href = trophy.source.url;
-    a.textContent = trophy.source.name;
-    a.rel = 'noreferrer';
-    src.appendChild(a);
-    src.append('. Guide written in the atlas\u2019s own words; no text copied.');
-    host.appendChild(src);
+    const sourceLine = document.createElement('p');
+    sourceLine.className = 'guide-source';
+    sourceLine.append('Source cited for this guide: ');
+    const link = document.createElement('a');
+    link.href = trophy.source.url;
+    link.textContent = trophy.source.name;
+    link.rel = 'noreferrer';
+    sourceLine.appendChild(link);
+    sourceLine.append('. The guide above is written in this atlas\u2019s own words — a source is cited, never copied.');
+    host.appendChild(sourceLine);
   }
 }
