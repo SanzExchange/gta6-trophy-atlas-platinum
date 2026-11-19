@@ -1,20 +1,19 @@
-// Trophy data + saved progress: load the official list, keep the earned set in
-// localStorage, export it to a file, import it back, and build shareable links.
-export const STORAGE_KEY = 'atlas-platinum-leonida-v1';
+// Trophy store for the rebuild: fetch the official list, persist the earned
+// set in localStorage, and move progress in and out as a JSON file or a link.
+export const STORAGE_KEY = 'atlas-platinum-leonida-rebuild-v2';
 
 export async function loadTrophyList() {
-  const response = await fetch('data/trophies.json');
-  const doc = await response.json();
-  return doc.trophies;
+  const res = await fetch('data/trophies.json');
+  const data = await res.json();
+  return Array.isArray(data) ? data : data.trophies;
 }
 
-export function loadEarned(trophies) {
+export function loadEarned() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return new Set();
     const ids = JSON.parse(raw);
-    const known = new Set(trophies.map((t) => t.id));
-    return new Set(ids.filter((id) => known.has(id)));
+    return new Set(Array.isArray(ids) ? ids.filter((n) => Number.isInteger(n)) : []);
   } catch {
     return new Set();
   }
@@ -24,42 +23,32 @@ export function saveEarned(earned) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...earned].sort((a, b) => a - b)));
   } catch {
-    // Private mode / storage off: the atlas still works for this visit.
+    /* storage unavailable: progress simply will not persist */
   }
 }
 
 export function exportProgress(earned) {
-  const payload = {
-    app: 'Atlas Platinum Leonida',
-    game: 'Grand Theft Auto VI',
-    exported_at: new Date().toISOString(),
-    earned: [...earned].sort((a, b) => a - b),
-  };
-  const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+  const payload = JSON.stringify({ atlas: 'Atlas Platinum Leonida', earned: [...earned].sort((a, b) => a - b) }, null, 2);
+  const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
   a.download = 'atlas-platinum-progress.json';
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
-export async function importProgress(file, trophies) {
-  try {
-    const doc = JSON.parse(await file.text());
-    const raw = Array.isArray(doc) ? doc : doc.earned;
-    if (!Array.isArray(raw)) return null;
-    const known = new Set(trophies.map((t) => t.id));
-    const ids = raw.map(Number).filter((id) => known.has(id));
-    return new Set(ids);
-  } catch {
-    alert('That file is not a valid Atlas progress export.');
-    return null;
-  }
+export function importProgress(file) {
+  return file.text().then((text) => {
+    const data = JSON.parse(text);
+    const ids = Array.isArray(data) ? data : data.earned;
+    if (!Array.isArray(ids)) throw new Error('No earned list in that file.');
+    return new Set(ids.filter((n) => Number.isInteger(n)));
+  });
 }
 
 export function progressLink(earned) {
-  const url = new URL(location.href);
-  url.search = '';
-  if (earned.size > 0) url.searchParams.set('earned', [...earned].sort((a, b) => a - b).join(','));
-  return url.toString();
+  const u = new URL(window.location.href);
+  u.search = '';
+  u.searchParams.set('earned', [...earned].sort((a, b) => a - b).join(','));
+  return u.toString();
 }

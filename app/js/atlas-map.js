@@ -1,30 +1,24 @@
-// Atlas map: a stylised chart of Leonida — six numbered regions, one per roadmap
-// stage, joined by the dashed gold route a player travels to the platinum.
+// Atlas chart for the rebuild: a stylised map of Leonida drawn as SVG — six
+// numbered landfalls joined by the dashed gold route to the platinum.
+const LANDMARKS = [
+  { x: 42, y: 118 }, { x: 96, y: 74 }, { x: 152, y: 104 },
+  { x: 196, y: 52 }, { x: 238, y: 96 }, { x: 268, y: 40 },
+];
+
 export function buildAtlasMap(stages, earned, activeStage) {
-  const regions = [
-    { id: 1, points: '10,18 78,10 92,44 60,66 22,58', cx: 52, cy: 36, label: 'LANDFALL' },
-    { id: 2, points: '96,12 190,8 210,40 168,58 96,46', cx: 152, cy: 30, label: 'VICE CITY' },
-    { id: 3, points: '66,70 160,64 176,108 120,128 70,110', cx: 122, cy: 94, label: 'THE CREW' },
-    { id: 4, points: '24,72 62,72 66,120 40,158 12,120', cx: 38, cy: 112, label: 'PLAYGROUND' },
-    { id: 5, points: '180,66 216,52 244,96 228,150 186,132 178,104', cx: 210, cy: 100, label: 'HEAT' },
-    { id: 6, points: '110,138 150,134 158,162 118,168', cx: 134, cy: 150, label: 'CLEANUP' },
-  ];
-  const route = regions.map((r) => `${r.cx},${r.cy}`).join(' ');
-  const parts = ['<svg viewBox="0 0 260 182" role="img" aria-label="Stylised map of Leonida with the six roadmap stages">'];
-  parts.push(`<polyline class="map-route" points="${route}"></polyline>`);
-  for (const region of regions) {
-    const stage = stages.find((s) => s.id === region.id);
-    const done = stage.trophies.filter((id) => earned.has(id)).length;
-    const allDone = done === stage.trophies.length;
-    parts.push(
-      `<polygon class="map-region${allDone ? ' done' : ''}${activeStage === region.id ? ' active' : ''}" ` +
-      `data-stage="${region.id}" points="${region.points}"></polygon>`,
-    );
-  }
-  for (const region of regions) {
-    parts.push(`<text class="map-num" x="${region.cx}" y="${region.cy - 4}">${region.id}</text>`);
-    parts.push(`<text class="map-label" x="${region.cx}" y="${region.cy + 10}">${region.label}</text>`);
-  }
-  parts.push('</svg>');
-  return parts.join('');
+  const route = LANDMARKS.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  const marks = stages.map((stage, i) => {
+    const p = LANDMARKS[i];
+    const done = stage.ids.every((id) => earned.has(id));
+    const fill = done ? '#c9a227' : (activeStage === stage.key ? '#e3c766' : '#16281f');
+    const label = done ? '#1c1503' : '#efe6cf';
+    return `<g><circle cx="${p.x}" cy="${p.y}" r="13" fill="${fill}" stroke="#c9a227" stroke-width="1.6"/><text x="${p.x}" y="${p.y + 4.5}" text-anchor="middle" font-size="11.5" font-family="Georgia, serif" fill="${label}">${stage.key}</text></g>`;
+  }).join('');
+  return `<svg viewBox="0 0 300 150" role="img" aria-label="Stylised chart of Leonida with the six roadmap stages">
+    <path d="M8,132 C60,96 84,140 138,116 C190,94 226,128 292,86 L292,150 L8,150 Z" fill="#0e2019"/>
+    <path d="M8,26 C70,8 150,30 292,14" fill="none" stroke="#2c4636" stroke-width="1" stroke-dasharray="3 4"/>
+    <path d="${route}" fill="none" stroke="#c9a227" stroke-width="2" stroke-dasharray="6 4"/>
+    ${marks}
+    <text x="10" y="18" font-size="9.5" letter-spacing="2" fill="#a9b8a4" font-family="Georgia, serif">LEONIDA — SURVEY OF THE PLATINUM ROUTE</text>
+  </svg>`;
 }

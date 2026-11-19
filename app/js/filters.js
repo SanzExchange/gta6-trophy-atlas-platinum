@@ -1,46 +1,45 @@
-// Filtering + spoiler masking: one place decides which trophies a view shows
-// and what a spoiler-safe view is allowed to reveal about story trophies.
-import { ROADMAP_STAGES } from './render-roadmap.js';
-
-export function spoilerMask(trophy, earned, spoilerOn) {
-  const hidden = spoilerOn && trophy.kind === 'story' && !earned.has(trophy.id);
-  return {
-    name: hidden ? 'Hidden story trophy' : trophy.name,
-    description: hidden ? '??? — earn it to reveal the name and description.' : trophy.description,
-    masked: hidden,
-  };
+// Filters and spoiler masking for the rebuild. One module decides which
+// trophies a view lists, and what a spoiler-safe view may reveal.
+export function matchesKind(trophy, kind) {
+  if (kind === 'all') return true;
+  if (kind === 'missable') return trophy.missable === true;
+  if (kind === 'online') return trophy.kind === 'online';
+  return trophy.kind === kind;
 }
 
-export function applyFilters(trophies, state) {
+export function applyFilters(state) {
   const q = state.search.trim().toLowerCase();
-  return trophies.filter((t) => {
-    if (state.stage !== null) {
-      const stage = ROADMAP_STAGES.find((s) => s.id === state.stage);
-      if (!stage || !stage.trophies.includes(t.id)) return false;
-    }
-    if (state.kind === 'missable' && !t.missable) return false;
-    if (state.kind === 'online' && t.kind !== 'online') return false;
-    if (state.kind !== 'all' && state.kind !== 'missable' && state.kind !== 'online' && t.kind !== state.kind) return false;
+  return state.trophies.filter((t) => {
+    if (!matchesKind(t, state.kind)) return false;
     if (state.grade !== 'all' && t.grade !== state.grade) return false;
+    if (state.stage && t.stage !== state.stage) return false;
     if (state.hideEarned && state.earned.has(t.id)) return false;
-    if (q && !(t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q))) return false;
+    if (q) {
+      const hay = `${t.name} ${t.description} ${t.guide}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     return true;
   });
 }
 
-export function filterNoteText(state, shown, total) {
-  const parts = [];
-  if (state.stage !== null) {
-    const stage = ROADMAP_STAGES.find((s) => s.id === state.stage);
-    parts.push(`Roadmap stage ${stage.id} — ${stage.name}`);
+export function spoilerMask(trophy, state) {
+  const masked = state.spoiler && trophy.kind === 'story' && !state.earned.has(trophy.id);
+  if (!masked) return { name: trophy.name, description: trophy.description, masked: false };
+  return { name: '— story trophy (spoiler-safe) —', description: 'Hidden by the spoiler setting until earned.', masked: true };
+}
+
+export function filterNoteText(state, shownCount) {
+  if (state.kind === 'online') {
+    return 'Online: the official PS5 list contains 0 online trophies — every one of the 55 is earned offline, in single player.';
   }
-  if (state.kind === 'missable') parts.push('Missable trophies only — PowerPyx & GTABase flag just 1 of 55');
-  if (state.kind === 'online') parts.push('No online trophies exist in this list — all 55 are offline single-player');
-  if (state.kind !== 'all' && state.kind !== 'missable' && state.kind !== 'online') parts.push(`Kind: ${state.kind}`);
-  if (state.grade !== 'all') parts.push(`Grade: ${state.grade}`);
-  if (state.search.trim()) parts.push(`Search: “${state.search.trim()}”`);
-  if (state.hideEarned) parts.push('earned hidden');
-  if (state.spoiler) parts.push('spoiler-safe on — story trophies stay hidden until earned');
-  const head = parts.length ? parts.join(' · ') + ' — ' : '';
-  return `${head}Showing ${shown} of ${total} trophies.`;
+  if (state.kind === 'missable') {
+    return '⚑ Exactly 1 of the 55 trophies is missable: Positive Mental Attitude. Its first meditation spot, at Jason\u2019s house, exists only during Chapter 1.';
+  }
+  if (state.spoiler) {
+    return `Spoiler-safe is ON: unearned story trophies show neither name nor description. Showing ${shownCount} of 55.`;
+  }
+  if (state.stage) {
+    return `Roadmap stage ${state.stage} selected — showing ${shownCount} of 55 trophies. Select the stage again to clear it.`;
+  }
+  return `Showing ${shownCount} of 55 trophies.`;
 }

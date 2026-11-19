@@ -1,140 +1,62 @@
-// Guide panel rendering: the selected trophy's official text, the atlas's own
-// guide with steps, the missable warning when it applies, and the source it cites.
+// Guide panel for the rebuild: the selected trophy's official name and
+// description, the missable warning where it applies, the atlas's own guide
+// text, its steps, and the named source the guide cites.
 import { spoilerMask } from './filters.js';
 
-const GRADE_LABEL = { platinum: 'Platinum', gold: 'Gold', silver: 'Silver', bronze: 'Bronze' };
-
-export function renderGuide(state, handlers) {
-  const body = document.getElementById('guideBody');
-  const trophy = state.trophies.find((t) => t.id === state.selectedId) || state.trophies[0];
+export function renderGuide(state) {
+  const host = document.getElementById('guideBody');
+  const trophy = state.trophies.find((t) => t.id === state.selectedId);
   if (!trophy) {
-    body.innerHTML = '<p class="guide-empty">No trophy data loaded yet.</p>';
+    host.innerHTML = '<p class="guide-empty">Select a trophy in the checklist to read its guide here.</p>';
     return;
   }
-  const earned = state.earned.has(trophy.id);
-  const view = spoilerMask(trophy, state.earned, state.spoiler);
-  body.replaceChildren();
-
+  const view = spoilerMask(trophy, state);
+  host.innerHTML = '';
+  if (trophy.missable) {
+    const banner = document.createElement('div');
+    banner.className = 'missable-banner';
+    banner.textContent = '⚑ MISSABLE — the first meditation spot, at Jason\u2019s house, exists only during Chapter 1. Do it before that chapter ends, or keep a manual save from Chapter 1.';
+    host.appendChild(banner);
+  }
   const title = document.createElement('h3');
-  title.className = 'guide-title';
   title.textContent = view.name;
-  body.append(title);
-
   const official = document.createElement('p');
   official.className = 'guide-official';
-  official.textContent = view.masked
-    ? 'Official description hidden by the spoiler setting.'
-    : `Official: “${trophy.description}”`;
-  body.append(official);
-
-  const badges = document.createElement('div');
-  badges.className = 'guide-badges';
-  const grade = document.createElement('span');
-  grade.className = `grade-badge grade-${trophy.grade}`;
-  grade.textContent = GRADE_LABEL[trophy.grade];
-  badges.append(grade);
-  if (trophy.missable) {
-    const flag = document.createElement('span');
-    flag.className = 'tag missable-tag';
-    flag.textContent = '⚑ MISSABLE — do this before Chapter 1 ends';
-    badges.append(flag);
+  official.textContent = view.masked ? view.description : `\u201C${trophy.description}\u201D — official description`;
+  const meta = document.createElement('div');
+  meta.className = 'guide-meta';
+  for (const label of [trophy.grade.toUpperCase(), trophy.kind, 'Roadmap stage ' + trophy.stage, trophy.hidden ? 'hidden on PS5' : 'visible on PS5', state.earned.has(trophy.id) ? '✓ earned' : 'not yet earned']) {
+    const s = document.createElement('span');
+    s.className = 'tag';
+    s.textContent = label;
+    meta.appendChild(s);
   }
-  if (trophy.hidden) {
-    const hidden = document.createElement('span');
-    hidden.className = 'tag';
-    hidden.textContent = 'Hidden on PSN until earned';
-    badges.append(hidden);
-  }
-  const stage = document.createElement('span');
-  stage.className = 'tag kind-tag';
-  stage.textContent = `Roadmap ${trophy.stage}`;
-  badges.append(stage);
-  body.append(badges);
-
-  const source = document.createElement('div');
-  source.className = 'guide-source';
-  source.innerHTML = '<strong>Source: </strong>';
-  const link = document.createElement('a');
-  link.href = trophy.source.url;
-  link.target = '_blank';
-  link.rel = 'noopener';
-  link.textContent = trophy.source.name;
-  source.append(link);
-  source.append(document.createTextNode(
-    ' — names, descriptions, and grades are the official PS5 list via Exophase & PSNProfiles (18 Nov 2026).',
-  ));
-  body.append(source);
-
-  if (trophy.missable) {
-    const callout = document.createElement('div');
-    callout.className = 'missable-callout';
-    callout.innerHTML = '<strong>⚑ Missable — read this first.</strong> ';
-    callout.append(document.createTextNode(
-      'PowerPyx and GTABase both flag this as the list’s only possibly-missable trophy: ' +
-      'the first meditation spot is offered at Jason’s house in Chapter 1 and is gone after ' +
-      'that chapter. There is no mission replay, so do it during Chapter 1 — before moving on.',
-    ));
-    body.append(callout);
-  }
-
-  const how = document.createElement('h3');
-  how.textContent = 'How to earn it';
-  body.append(how);
-  const text = document.createElement('div');
-  text.className = 'guide-text';
-  for (const para of trophy.guide.split('\n\n')) {
-    const p = document.createElement('p');
-    p.textContent = para;
-    text.append(p);
-  }
-  body.append(text);
-
-  if (trophy.steps && trophy.steps.length) {
-    const stepsTitle = document.createElement('h3');
-    stepsTitle.textContent = 'Steps';
-    body.append(stepsTitle);
-    const steps = document.createElement('ol');
-    steps.className = 'guide-steps';
+  const guide = document.createElement('p');
+  guide.className = 'guide-text';
+  guide.textContent = view.masked
+    ? 'Spoiler-safe is on: this story trophy\u2019s guide is hidden until the trophy is earned. Tick it in the checklist to reveal the full guide.'
+    : trophy.guide;
+  host.append(title, official, meta, guide);
+  if (!view.masked && Array.isArray(trophy.steps) && trophy.steps.length) {
+    const ol = document.createElement('ol');
+    ol.className = 'guide-steps';
     for (const step of trophy.steps) {
       const li = document.createElement('li');
       li.textContent = step;
-      steps.append(li);
+      ol.appendChild(li);
     }
-    body.append(steps);
+    host.appendChild(ol);
   }
-
-  if (trophy.unconfirmed) {
-    const note = document.createElement('p');
-    note.className = 'guide-text';
-    note.innerHTML = '<strong>Unconfirmed at launch:</strong> ';
-    note.append(document.createTextNode(
-      'PowerPyx and GTABase both list this trophy’s method as not yet known (18 Nov 2026). ' +
-      'The steps above are the atlas’s best reading of the official description — check the cited guide for updates as players confirm it.',
-    ));
-    body.append(note);
+  if (!view.masked && trophy.source) {
+    const src = document.createElement('p');
+    src.className = 'guide-source';
+    src.append('Source cited for this guide: ');
+    const a = document.createElement('a');
+    a.href = trophy.source.url;
+    a.textContent = trophy.source.name;
+    a.rel = 'noreferrer';
+    src.appendChild(a);
+    src.append('. Guide written in the atlas\u2019s own words; no text copied.');
+    host.appendChild(src);
   }
-
-  const nav = document.createElement('div');
-  nav.className = 'guide-nav';
-  const prev = document.createElement('button');
-  prev.type = 'button';
-  prev.className = 'btn';
-  prev.textContent = '← Previous trophy';
-  prev.disabled = trophy.id <= 1;
-  prev.addEventListener('click', () => handlers.onNavigate(trophy.id - 1));
-  const next = document.createElement('button');
-  next.type = 'button';
-  next.className = 'btn';
-  next.textContent = 'Next trophy →';
-  next.disabled = trophy.id >= state.trophies.length;
-  next.addEventListener('click', () => handlers.onNavigate(trophy.id + 1));
-  nav.append(prev, next);
-  body.append(nav);
-
-  const toggle = document.createElement('button');
-  toggle.type = 'button';
-  toggle.className = 'btn gold earned-toggle';
-  toggle.textContent = earned ? '✓ Earned — click to unmark' : 'Mark as earned';
-  toggle.addEventListener('click', () => handlers.onToggleEarned(trophy.id));
-  body.append(toggle);
 }

@@ -1,85 +1,50 @@
-// Checklist rendering: one row per trophy — checkbox, grade badge, official name
-// and description, kind + missable tags, and a link into the guide panel.
+// Checklist rendering for the rebuild: one row per trophy with its earned
+// checkbox, official name and description, grade chip, kind, stage and the
+// red missable flag. Spoiler-safe rows mask story trophies until earned.
 import { applyFilters, spoilerMask, filterNoteText } from './filters.js';
 
-const GRADE_LABEL = { platinum: 'Plat', gold: 'Gold', silver: 'Silver', bronze: 'Bronze' };
-const KIND_LABEL = { story: 'Story', collectibles: 'Collectibles', activities: 'Activities', online: 'Online', meta: 'Platinum' };
-
-export function renderChecklist(state, handlers) {
-  const rowsEl = document.getElementById('trophyRows');
-  const shown = applyFilters(state.trophies, state);
-  rowsEl.replaceChildren();
-  for (const trophy of shown) {
-    rowsEl.append(buildTrophyRow(state, trophy, handlers));
-  }
-  document.getElementById('emptyState').hidden = shown.length > 0;
-  document.getElementById('filterNote').textContent = filterNoteText(state, shown.length, state.trophies.length);
-  document.querySelectorAll('#filterChips .chip').forEach((chip) => {
-    chip.classList.toggle('active', chip.dataset.kind === state.kind);
-  });
-  document.getElementById('checklistHeading').textContent =
-    state.stage !== null ? `Checklist — roadmap stage ${state.stage}` : 'Checklist — every trophy';
+function tag(text, cls) {
+  const s = document.createElement('span');
+  s.className = 'tag' + (cls ? ' ' + cls : '');
+  s.textContent = text;
+  return s;
 }
 
-function buildTrophyRow(state, trophy, handlers) {
-  const earned = state.earned.has(trophy.id);
-  const view = spoilerMask(trophy, state.earned, state.spoiler);
-  const row = document.createElement('div');
-  row.className = 'trophy-row' + (earned ? ' earned-row' : '') + (state.selectedId === trophy.id ? ' selected' : '');
-  row.dataset.trophyId = String(trophy.id);
-  row.setAttribute('role', 'button');
-  row.tabIndex = 0;
-
-  const box = document.createElement('input');
-  box.type = 'checkbox';
-  box.checked = earned;
-  box.setAttribute('aria-label', `Earned: ${trophy.name}`);
-  box.addEventListener('click', (e) => e.stopPropagation());
-  box.addEventListener('change', () => handlers.onToggleEarned(trophy.id));
-
-  const badge = document.createElement('span');
-  badge.className = `grade-badge grade-${trophy.grade}`;
-  badge.textContent = GRADE_LABEL[trophy.grade];
-
-  const main = document.createElement('div');
-  const name = document.createElement('div');
-  name.className = 'trophy-name';
-  name.textContent = view.name;
-  if (trophy.hidden) {
-    const mark = document.createElement('span');
-    mark.className = 'hidden-mark';
-    mark.textContent = ' · hidden on PSN';
-    name.append(mark);
+export function renderChecklist(state, handlers) {
+  const rows = applyFilters(state);
+  const host = document.getElementById('trophyRows');
+  host.innerHTML = '';
+  for (const trophy of rows) {
+    const view = spoilerMask(trophy, state);
+    const row = document.createElement('div');
+    row.className = 'trophy-row' + (state.earned.has(trophy.id) ? ' earned' : '') + (state.selectedId === trophy.id ? ' selected' : '');
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = state.earned.has(trophy.id);
+    box.setAttribute('aria-label', `Mark ${trophy.name} as earned`);
+    box.addEventListener('click', (ev) => ev.stopPropagation());
+    box.addEventListener('change', () => handlers.onToggle(trophy.id));
+    const body = document.createElement('div');
+    const name = document.createElement('div');
+    name.className = 'row-name' + (view.masked ? ' masked' : '');
+    name.textContent = view.name;
+    const desc = document.createElement('div');
+    desc.className = 'row-desc' + (view.masked ? ' masked' : '');
+    desc.textContent = view.description;
+    const tags = document.createElement('div');
+    tags.className = 'row-tags';
+    tags.appendChild(tag(trophy.grade.toUpperCase(), 'grade-' + trophy.grade));
+    tags.appendChild(tag(trophy.kind));
+    tags.appendChild(tag('Stage ' + trophy.stage));
+    if (trophy.hidden) tags.appendChild(tag('hidden', 'hidden-tag'));
+    if (trophy.missable) tags.appendChild(tag('⚑ MISSABLE', 'flag'));
+    body.append(name, desc, tags);
+    row.append(box, body);
+    row.addEventListener('click', () => handlers.onSelect(trophy.id));
+    host.appendChild(row);
   }
-  const desc = document.createElement('div');
-  desc.className = 'trophy-desc';
-  desc.textContent = view.description;
-  const tags = document.createElement('div');
-  tags.className = 'trophy-tags';
-  const kindTag = document.createElement('span');
-  kindTag.className = 'tag kind-tag';
-  kindTag.textContent = KIND_LABEL[trophy.kind] || trophy.kind;
-  tags.append(kindTag);
-  if (trophy.missable) {
-    const flag = document.createElement('span');
-    flag.className = 'tag missable-tag';
-    flag.textContent = '⚑ MISSABLE';
-    tags.append(flag);
-  }
-  const stageTag = document.createElement('span');
-  stageTag.className = 'tag';
-  stageTag.textContent = `Roadmap ${trophy.stage}`;
-  tags.append(stageTag);
-  main.append(name, desc, tags);
-
-  const link = document.createElement('span');
-  link.className = 'guide-link';
-  link.textContent = 'Guide →';
-
-  const open = () => handlers.onSelect(trophy.id);
-  row.addEventListener('click', open);
-  row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
-
-  row.append(box, badge, main, link);
-  return row;
+  document.getElementById('emptyState').hidden = rows.length > 0;
+  document.getElementById('filterNote').textContent = filterNoteText(state, rows.length);
+  document.getElementById('checklistHeading').textContent =
+    state.kind === 'all' && !state.stage ? 'Checklist — all 55 trophies' : `Checklist — ${rows.length} shown`;
 }

@@ -1,46 +1,44 @@
-// Roadmap: the six stages in play order, with their trophies, the map above
-// them, and the per-stage progress that turns a stage gold when it is done.
-import { buildAtlasMap } from './atlas-map.js';
-
+// Roadmap data for the rebuild: six stages in travel order. Each stage owns a
+// set of trophy ids; the stage keys match the "stage" field in trophies.json.
 export const ROADMAP_STAGES = [
-  { id: 1, name: 'Landfall', span: 'Chapters 1–2', trophies: [2, 3, 4, 8], blurb: 'Gone Fishing · Ch. 1 · Ch. 2 · Breakfast Run' },
-  { id: 2, name: 'Vice City Rising', span: 'Chapters 3–4', trophies: [5, 6, 9, 10, 11, 12, 13], blurb: 'Ch. 3 · Ch. 4 · heists & takedowns' },
-  { id: 3, name: 'The Crew', span: 'Side characters', trophies: [22, 23, 24, 26, 27, 25], blurb: 'Andy · Kenton · Billy · Randy · Tyrone · strangers' },
-  { id: 4, name: 'Leonida Playground', span: 'Activities', trophies: [15, 16, 17, 18, 19, 20, 21, 28, 29, 32], blurb: 'Stunts · range · races · fishing · meditation' },
-  { id: 5, name: 'Heat & Heists', span: 'Open world', trophies: [33, 34, 36, 37, 38, 39, 40, 41, 43, 44, 45, 46, 47, 48, 49, 50, 51], blurb: 'Partner · robberies · feats · one-offs' },
-  { id: 6, name: 'Platinum Cleanup', span: 'Collectibles & 100%', trophies: [30, 31, 35, 42, 52, 53, 54, 55, 14, 7, 1], blurb: 'Cards · WAiNK · vehicles · 100% · platinum' },
+  { key: 'I', name: 'First Landfall', desc: 'Chapters 1–2 and the opening missions. Meditate at Jason\u2019s house before Chapter 1 ends — the one missable step on the whole chart.', ids: [2, 3, 4, 8] },
+  { key: 'II', name: 'The Rising Route', desc: 'Chapters 3–4 and the mid-story set pieces: the cartel heist, VCIA takedown, Operation Savage Glory.', ids: [5, 6, 9, 10, 11, 12, 13] },
+  { key: 'III', name: 'Strand Country', desc: 'The side-character strands. Finish eight strands for the Strangers & Freaks silver; the five named finals each pay a bronze.', ids: [22, 23, 24, 25, 26, 27] },
+  { key: 'IV', name: 'Fairgrounds & Wilds', desc: 'Activities sampler and the open-world grinds: 250 stunts, 42 range golds, drone races, fishing — plus every meditation spot for the missable ⚑.', ids: [15, 16, 17, 18, 19, 20, 21, 28, 29, 32] },
+  { key: 'V', name: 'Feats & Felonies', desc: 'Partner feats and the robbery line: shops, vaults, armoured trucks, gang operations, and the hidden free-roam oddities.', ids: [33, 34, 36, 37, 38, 39, 40, 41, 43, 44, 45, 46, 47, 48, 49, 50, 51] },
+  { key: 'VI', name: 'The Platinum Meridian', desc: 'Finale, 100% completion gold, card sets, garages, laundering and spending — the cleanup sweep that closes the atlas.', ids: [1, 7, 14, 30, 31, 35, 42, 52, 53, 54, 55] },
 ];
 
-export function renderRoadmap(state, handlers) {
-  const mapEl = document.getElementById('roadmapMap');
-  mapEl.innerHTML = buildAtlasMap(ROADMAP_STAGES, state.earned, state.stage);
-  mapEl.querySelectorAll('.map-region').forEach((region) => {
-    region.addEventListener('click', () => handlers.onStage(Number(region.dataset.stage)));
-  });
+import { buildAtlasMap } from './atlas-map.js';
 
+export function stageOf(trophy) {
+  return ROADMAP_STAGES.find((s) => s.key === trophy.stage) || null;
+}
+
+export function renderRoadmap(state, onStageSelect) {
+  const mapHost = document.getElementById('roadmapMap');
+  mapHost.innerHTML = buildAtlasMap(ROADMAP_STAGES, state.earned, state.stage);
   const list = document.getElementById('roadmapStages');
-  list.replaceChildren();
+  list.innerHTML = '';
   for (const stage of ROADMAP_STAGES) {
-    const done = stage.trophies.filter((id) => state.earned.has(id)).length;
+    const done = stage.ids.filter((id) => state.earned.has(id)).length;
     const li = document.createElement('li');
-    if (state.stage === stage.id) li.classList.add('active');
-    li.addEventListener('click', () => handlers.onStage(stage.id));
-
-    const num = document.createElement('span');
-    num.className = 'stage-num' + (done === stage.trophies.length ? ' done' : '');
-    num.textContent = String(stage.id);
-    const body = document.createElement('div');
-    const name = document.createElement('div');
+    li.className = 'stage-card' + (state.stage === stage.key ? ' active' : '') + (done === stage.ids.length ? ' done' : '');
+    li.innerHTML = '';
+    const head = document.createElement('div');
+    head.className = 'stage-head';
+    const name = document.createElement('span');
     name.className = 'stage-name';
-    name.textContent = `${stage.name} — ${stage.span}`;
-    const blurb = document.createElement('div');
-    blurb.className = 'stage-trophies';
-    blurb.textContent = stage.blurb;
-    body.append(name, blurb);
-    const meta = document.createElement('span');
-    meta.className = 'stage-meta';
-    meta.textContent = `${done}/${stage.trophies.length}`;
-    li.append(num, body, meta);
-    list.append(li);
+    name.textContent = `Stage ${stage.key} — ${stage.name}`;
+    const count = document.createElement('span');
+    count.className = 'stage-count';
+    count.textContent = `${done}/${stage.ids.length} earned`;
+    head.append(name, count);
+    const desc = document.createElement('p');
+    desc.className = 'stage-desc';
+    desc.textContent = stage.desc;
+    li.append(head, desc);
+    li.addEventListener('click', () => onStageSelect(state.stage === stage.key ? null : stage.key));
+    list.appendChild(li);
   }
 }
