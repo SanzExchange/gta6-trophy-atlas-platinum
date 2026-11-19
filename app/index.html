@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atlas Platinum Leonida — GTA 6 Trophy Guide &amp; Tracker</title>
+<meta name="description" content="Offline atlas and tracker for all 55 Grand Theft Auto VI PlayStation 5 trophies: roadmap to the platinum, missable flags, and a cited guide for every trophy.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="masthead">
+  <div class="brand">
+    <div class="compass" aria-hidden="true">◆</div>
+    <div>
+      <h1>Atlas Platinum Leonida</h1>
+      <p class="tagline">A journey-map for all 55 GTA&nbsp;VI trophies — chart your route to the platinum.</p>
+    </div>
+  </div>
+  <div class="progress-cluster">
+    <svg id="progressRing" class="ring" viewBox="0 0 120 120" width="104" height="104" role="img" aria-label="Platinum progress ring">
+      <circle class="ring-track" cx="60" cy="60" r="52"></circle>
+      <circle id="ringFill" class="ring-fill" cx="60" cy="60" r="52"></circle>
+      <text id="ringPct" class="ring-pct" x="60" y="57">0%</text>
+      <text class="ring-sub" x="60" y="76">PLATINUM</text>
+    </svg>
+    <div class="progress-numbers">
+      <p id="progressText" class="progress-text">0 of 55 earned</p>
+      <p id="gradeCounts" class="grade-counts">Platinum 0/1 · Gold 0/2 · Silver 0/6 · Bronze 0/46</p>
+      <p id="pointsText" class="points-text">55 trophies · 1 platinum · 2 gold · 6 silver · 46 bronze · 28 hidden</p>
+      <div class="header-actions">
+        <button id="exportBtn" type="button" class="btn gold">Export progress</button>
+        <label class="btn import-btn">Import progress <input id="importInput" type="file" accept="application/json,.json"></label>
+        <button id="copyLinkBtn" type="button" class="btn">Copy progress link</button>
+        <button id="resetBtn" type="button" class="btn danger">Reset</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <label class="search-box">Search trophies <input id="searchInput" type="search" placeholder="Name, mission, place…" autocomplete="off"></label>
+  <label class="spoiler-box"><input id="spoilerToggle" type="checkbox"> Spoiler-safe: hide story trophies until earned</label>
+  <label class="earned-box"><input id="hideEarnedToggle" type="checkbox"> Hide earned</label>
+  <label class="grade-box">Grade
+    <select id="gradeSelect">
+      <option value="all">All grades</option>
+      <option value="platinum">Platinum</option>
+      <option value="gold">Gold</option>
+      <option value="silver">Silver</option>
+      <option value="bronze">Bronze</option>
+    </select>
+  </label>
+</div>
+
+<nav id="filterChips" class="chips" aria-label="Filter trophies by kind">
+  <button type="button" data-kind="all" class="chip active">All 55</button>
+  <button type="button" data-kind="story" class="chip">Story · 18</button>
+  <button type="button" data-kind="missable" class="chip flag-chip">⚑ Missable · 1</button>
+  <button type="button" data-kind="collectibles" class="chip">Collectibles · 6</button>
+  <button type="button" data-kind="activities" class="chip">Activities · 30</button>
+  <button type="button" data-kind="online" class="chip">Online · 0</button>
+</nav>
+<p id="filterNote" class="filter-note"></p>
+
+<main class="atlas-grid">
+  <aside class="roadmap-panel" aria-label="Roadmap to the platinum">
+    <h2>Roadmap — the route to platinum</h2>
+    <p class="panel-hint">Six stages, in the order to play them. Click a stage to filter the checklist. PowerPyx rates the platinum 4/10, about 200 hours, one playthrough.</p>
+    <div id="roadmapMap" class="roadmap-map"></div>
+    <ol id="roadmapStages" class="roadmap-stages"></ol>
+    <div class="roadmap-warnings">
+      <h3>Before you start</h3>
+      <ul>
+        <li><strong>Keep a manual save at the start of every chapter.</strong> There is no mission replay and no New Game+.</li>
+        <li><strong>Cheats disable trophies and saving</strong> — keep them off your trophy save.</li>
+        <li><strong>One trophy can be missed:</strong> Positive Mental Attitude — meditate at Jason&rsquo;s house in Chapter 1, before that chapter ends.</li>
+        <li>Free-roam continues after the story, so most cleanup can wait until the credits.</li>
+      </ul>
+    </div>
+  </aside>
+
+  <section class="checklist-panel" aria-label="Trophy checklist">
+    <h2 id="checklistHeading">Checklist — every trophy</h2>
+    <p class="panel-hint">Tick a trophy when you earn it — progress is saved in this browser. Click any row to open its guide.</p>
+    <div id="trophyRows" class="trophy-rows"></div>
+    <p id="emptyState" class="empty-state" hidden>No trophies match this filter. Try another kind, grade, or search.</p>
+  </section>
+
+  <aside id="guidePanel" class="guide-panel" aria-label="Trophy guide" aria-live="polite">
+    <h2>Guide</h2>
+    <div id="guideBody" class="guide-body">
+      <p class="guide-empty">Select a trophy in the checklist to read its guide, steps, and sources here.</p>
+    </div>
+  </aside>
+</main>
+
+<footer class="colophon">
+  <p><strong>Sources.</strong> Trophy names, descriptions, and grades are the official PlayStation 5 list as published by Exophase and PSNProfiles on 18 November 2026 (28 hidden). How-to guidance is written in our own words for this atlas; each guide names its source — chiefly PowerPyx&rsquo;s GTA 6 Trophy Guide &amp; Roadmap, GTABase, and the Exophase / PSNProfiles lists. No text is copied from those guides.</p>
+  <p><strong>Offline.</strong> This atlas loads only its own files and works with the network off. Progress lives in your browser (localStorage) — export it to keep a backup. Not affiliated with Rockstar Games; no Rockstar logo or artwork is used.</p>
+  <p><strong>Platinum facts.</strong> 55 trophies, all offline single-player · 0 online trophies · difficulty 4/10 · about 200 hours · 1 playthrough · 5 story chapters (60–80 hours) · 100% completion ≈ 60% of true completion.</p>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
